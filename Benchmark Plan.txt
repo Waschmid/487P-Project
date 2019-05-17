@@ -1,0 +1,46 @@
+For this project, I will be comparing two different database systems, BigQuery and Google Cloud SQL. Both are hosted on Google Cloud Platform, and therefore utilize the servers of googles data centers for their processing. Cloud SQL is simply a PostgreSQL instance hosted in the cloud, whereas BigQuery is a scalable warehousing platform designed to handle large amounts of data. I chose these cloud platforms to get myself more familiar with cloud based data solutions, and also from a desire to see if I would be able to test the claims that BigQuery is truly better for processing complex queries on huge amounts of data.
+
+My research into BigQuery proved a tad difficult, as the underlying technology is a conglomeration of various Google technologies, which was honestly kind of hard to wrap my head around. As far as I can tell, BigQuery is essentially a wrapper to interact with a heavily decentralized data management system which when given a query, will repeatedly rewrite the query as it is passed down a query execution tree to effectively parallelize the work needed across many compute units. The data itself is stored in a distributed manner which falls in line with how queries need to be broken down and modified to properly interact with the various shards of data. BigQuery does not support indexing as a traditional DBMS does. As datasets grow, BigQuery simply throws more compute and storage resources into the mix to keep performance constant and costs increasing linearly. Buffer pool size is irrelevant for BigQuery, as it will scale the resources in use to match the given query. I was unable to find information about all the types of join algorithms BigQuery use, but each query job given to BigQuery also comes with a detailed query execution plan with timing data. After performing a variety of queries, BigQuery used hash joins for all of them, so I must assume the underlying systems favor this type of join for most situations. This reporting also allows the user to see timing specific to each stage of query execution, providing more insight than just an overall time for the query to finish. Much of my understanding of the under the hood parts of BigQuery came from the following source: https://panoply.io/data-warehouse-guide/bigquery-architecture/.
+
+In constrast, Cloud SQL as previously mentioned is basically PostgreSQL 9.6 but running on a scalable cloud VM. Similar to BigQuery, I was unable to find specifics about things like buffer pool size, but I did find some supporting evidence that resources scale to meet the demands of a given query. Unlike BigQuery however, indexes are very much a thing in Cloud SQL, and can be used to improve the performance of queries that can take advantage of them. Join algorithms can vary from index based loops to hash and sort-merge joins. I plan to measure performance by using the standard SQL commands 'EXPLAIN' and 'ANALYZE'. 
+
+Experiment Design:
+
+For all of the following benchmarks, I intend to use datasets that follow the specification detailed in the Wisconsin Benchmark paper provided to the class. I plan to use varying sizes of tables, but their schema will all match. In Cloud SQL, I will not be using indexes. For each benchmark, I plan to take 7 execution time measurements for each specification, discard the longest and shortest measurements, and average the remaining measurements to get an average execution time.
+
+1. For my first benchmark, I want to test how a non-trivial JOIN query will scale with table size in each database system. I plan to use tables with cardinalities of 50,000, 500,000, 5,000,000, and 50,000,000 for this test. I plan to use the JoinCselASelB query from the paper, which is:
+
+SELECT * 
+FROM A, B, C
+WHERE (A.unique = B.unique)
+AND (B.unique = C.unique)
+AND (A.unique < X);
+
+X is the cardinality of A divided by 10, so as to provide a selectivity of 10% on the first join. Tables A and B will be of the same size, whereas table C will be 10 times smaller. I plan to run the query on each system for varying sizes of tables, and compare how performance is impacted by table size. I anticipate BigQuery will have a more linear increase in execution time compared to Cloud SQL, as it is designed to be used on larger datasets.
+
+2. For my second benchmark, I intend to test how a JOIN with varying selectivity compares between the two systems. One table size will be constant at 1,000,000 tuples (table A) while the other (table B) will be either 5,000, 10,000, 50,000, 100,000, and 250,000 to represent selectivities of .5%, 1%, 5%, 10%, and 25% respectively. The query will be:
+
+SELECT *
+FROM A, B 
+WHERE (A.unique2 = B.unique2);
+
+Like the previous benchmark, I intend more to look at the trend of each system in regards to how execution time is impacted by selectivity, versus the explicit performance difference between systems. I again anticipate BigQuery to have a more steady performance curve than Cloud SQL, as it is should theoretically scale to larger selectivities with more ease.
+
+3. For my third benchmark, I want to look at how an aggregation operatotion scales with table size. Similar to my first benchmark, table size will vary from 50,000 to 50,000,000. The query will be:
+
+SELECT AVG(unique2)
+FROM A;
+
+By running this query over varying size tables, I should be able to see how performance scales with cardinality. Like the previous benchmarks, I expect BigQuery to have a more linear increase in execution time compared to Cloud SQL.
+
+4. For the final benchmark, I would like to see how each system handles varying selectivity. The table in this benchmark will remain static in size at 1,000,000 tuples. The query will be:
+
+SELECT *
+FROM A
+WHERE (unique1 < X);
+
+X will vary between the values of 5,000 to 250,0000 to specify different selectivities, similar to benchmark 2. For this benchmark, I expect BigQuery to be better equipped to handle larger selectivities, and therefore have a flatter curve of execution time v selectivity.
+
+
+As far as issues encountered in this stage of the project, the only thing that comes to mind is the process of trying to figure out more about how BigQuery works. Whereas PostgreSQL is very close to what we've been discussing in class and has tons of documentation and supporting material avaialable on the web, most of the information about BigQuery I was able to find consisted of blog posts by Google developers that seemed to assume some prior knowledge of Google's other big data technologies. 
+
