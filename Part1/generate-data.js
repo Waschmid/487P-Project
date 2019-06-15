@@ -62,7 +62,7 @@ rand = function(seed, limit) {
 }
 
 fs.openSync(file, 'w')
-fs.appendFileSync(file, 'unique1,unique2,two,four,ten,twenty,onePercent,tenPercent,twentyPercent,fiftyPercent,unique3,evenOnePercent,oddOnePercent,stringu1,stringu2,string4\n')
+//fs.appendFileSync(file, 'unique1,unique2,two,four,ten,twenty,onePercent,tenPercent,twentyPercent,fiftyPercent,unique3,evenOnePercent,oddOnePercent,stringu1,stringu2,string4\n')
 let seed = generator
 for(i = 0; i < MAXTUPLES; i++) {
     let arr = []
@@ -101,8 +101,11 @@ for(i = 0; i < MAXTUPLES; i++) {
     arr.forEach(val => {
         tuple = tuple.concat(val.toString().concat(','))
     })
-    
-    tuple = tuple.substring(0, tuple.length - 1).concat('\n')
+    tuple = tuple.substring(0, tuple.length - 1)
+
+    if(i !== MAXTUPLES - 1) {
+        tuple = tuple.concat('\n')
+    } 
     
     fs.appendFileSync(file, tuple)
 }
